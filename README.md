@@ -45,8 +45,7 @@ In `Settings`, use:
 
 ## GitHub Pages Hosting
 
-This repo includes a GitHub Pages workflow at `.github/workflows/pages.yml`.
-When pushed to GitHub, it deploys the static app from the `public` folder.
+This repo can be served by GitHub Pages from the `docs` folder on the `main` branch. The `docs` folder is a static copy of the browser app from `public`.
 
 GitHub Pages mode uses browser local storage, so each tester has their own test data in their own browser. Use `Export JSON` and `Import JSON` to move a test dataset between people.
 
