@@ -2,7 +2,6 @@
   const API_STATE = "/api/state";
   const API_HEALTH = "/api/health";
   const API_DEFAULT_STATE = "/api/default-state";
-  const API_DEMO_STATE = "/api/demo-state";
   const STORAGE_KEY = "custom-transaction-logger-state-v1";
 
   const appRoot = document.getElementById("app");
@@ -137,13 +136,9 @@
         document.getElementById("importFile")?.click();
       }
 
-      if (action === "load-demo") {
-        loadDemoState();
-      }
-
-      if (action === "reset-blank") {
-        resetBlankState();
-      }
+    if (action === "reset-blank") {
+      resetBlankState();
+    }
     });
 
     document.addEventListener("change", (event) => {
@@ -226,12 +221,12 @@
       if (!response.ok) {
         throw new Error("Could not load server state");
       }
-      state = await response.json();
+      state = prepareState(await response.json());
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       apiAvailable = false;
       const cached = localStorage.getItem(STORAGE_KEY);
-      state = cached ? JSON.parse(cached) : createDefaultState();
+      state = cached ? prepareState(JSON.parse(cached)) : createDefaultState();
     }
   }
 
@@ -307,9 +302,11 @@
       link.classList.toggle("active", link.dataset.route === ui.route);
     });
 
-    serverStatus.innerHTML = health
-      ? `Server ready<br>${escapeHtml(health.localUrl)}`
-      : "Static mode<br>Data saves in this browser";
+    if (serverStatus) {
+      serverStatus.innerHTML = health
+        ? `Server ready<br>${escapeHtml(health.localUrl)}`
+        : "Static mode";
+    }
   }
 
   function ensureValidUiSelections() {
@@ -333,12 +330,11 @@
     return `
       <section class="page">
         ${pageHeader(
-          "Dashboard",
+          "Home",
           escapeHtml(state.settings.ownerName),
-          "Balances, tuition totals, and recent activity in one place.",
+          "",
           `<a class="button" href="#/log">Log transaction</a><a class="ghost-button" href="#/settings">Customize</a>`
         )}
-        ${renderSetupBanner()}
         <section class="grid-4">
           ${metric("Total balance", formatMoney(summary.totalBalance))}
           ${metric("Income", formatMoney(summary.income), "positive")}
@@ -350,19 +346,17 @@
             <div class="panel-head">
               <div>
                 <h3>Accounts</h3>
-                <p class="panel-copy">Drawer and bank balances update when transactions are logged.</p>
               </div>
               <a class="ghost-button" href="#/settings">Manage</a>
             </div>
             <div class="list">
-              ${activeAccounts().map(renderAccountCard).join("") || emptyBlock("No active accounts", "Add a drawer or bank from Settings.")}
+              ${activeAccounts().map(renderAccountCard).join("") || emptyBlock("No active accounts")}
             </div>
           </div>
           <div class="panel">
             <div class="panel-head">
               <div>
                 <h3>Tuition</h3>
-                <p class="panel-copy">Student credits and attendance are tied to the names you configure.</p>
               </div>
               <a class="ghost-button" href="#/tuition">Open tracker</a>
             </div>
@@ -374,7 +368,7 @@
               ${activeStudents()
                 .slice(0, 4)
                 .map((student) => renderStudentCard(student, { compact: true }))
-                .join("") || emptyBlock("No students yet", "Add student names from Students or Settings.")}
+                .join("") || emptyBlock("No students yet")}
             </div>
           </div>
         </section>
@@ -382,27 +376,13 @@
           <div class="panel-head">
             <div>
               <h3>Recent activity</h3>
-              <p class="panel-copy">Latest income, expenses, and transfers.</p>
             </div>
             <a class="ghost-button" href="#/history">View all</a>
           </div>
           <div class="list">
-            ${recent.map(renderTransactionCard).join("") || emptyBlock("No transactions yet", "Start with the Log page.")}
+            ${recent.map(renderTransactionCard).join("") || emptyBlock("No transactions yet")}
           </div>
         </section>
-      </section>
-    `;
-  }
-
-  function renderSetupBanner() {
-    const needsSetup = activeAccounts().length <= 1 && !activeStudents().length;
-    if (!needsSetup) {
-      return "";
-    }
-    return `
-      <section class="banner">
-        <strong>Ready for a new user</strong>
-        Customize the drawer label, banks, categories, and student names in Settings before real testing starts.
       </section>
     `;
   }
@@ -417,9 +397,9 @@
     return `
       <section class="page">
         ${pageHeader(
-          "Log",
+          "Transactions",
           "Money in and money out",
-          "Choose the category, account, amount, and date. Balances update immediately.",
+          "",
           `<a class="ghost-button" href="#/history">History</a>`
         )}
         <section class="panel">
@@ -447,17 +427,16 @@
           ${
             categories.length && accounts.length
               ? renderTransactionForm(isCredit ? "credit" : "debit", selectedCategory, tuitionMode)
-              : emptyBlock("Setup needed", "Add at least one active account and one category in Settings.")
+              : emptyBlock("Setup needed")
           }
         </section>
         <section class="panel">
           <div class="panel-head">
             <div>
               <h3>Transfer between accounts</h3>
-              <p class="panel-copy">Move money from drawer to bank or between banks without counting it as income or expense.</p>
             </div>
           </div>
-          ${accounts.length >= 2 ? renderTransferForm(accounts) : emptyBlock("Add another account first", "Transfers need at least two active accounts.")}
+          ${accounts.length >= 2 ? renderTransferForm(accounts) : emptyBlock("Add another account first")}
         </section>
       </section>
     `;
@@ -551,9 +530,9 @@
     return `
       <section class="page">
         ${pageHeader(
-          "Tuition",
+          "Tuition Tracker",
           "Attendance and student tracker",
-          "Pick a month, choose which students appear, then mark each tutored day.",
+          "",
           `<a class="ghost-button" href="#/students">Manage students</a>`
         )}
         <section class="grid-3">
@@ -593,13 +572,12 @@
           <div class="panel-head">
             <div>
               <h3>${escapeHtml(formatMonthTitle(ui.tuitionMonth))}</h3>
-              <p class="panel-copy">${selectedStudents.length} student column(s) selected.</p>
             </div>
           </div>
           ${
             selectedStudents.length
               ? renderTuitionTable(record, selectedStudents, rows)
-              : emptyBlock("Choose students for this month", "Use the visible-students controls above.")
+              : emptyBlock("Choose students for this month")
           }
         </section>
       </section>
@@ -663,7 +641,7 @@
         ${pageHeader(
           "Students",
           "Student names and credit totals",
-          "These names feed the tuition credit form and the attendance tracker.",
+          "",
           `<a class="ghost-button" href="#/tuition">Tuition tracker</a>`
         )}
         <section class="settings-grid">
@@ -675,11 +653,10 @@
             <div class="panel-head">
               <div>
                 <h3>Student list</h3>
-                <p class="panel-copy">Inactive students stay in old records but disappear from new forms.</p>
               </div>
             </div>
             <div class="list">
-              ${state.students.map((student) => renderStudentCard(student)).join("") || emptyBlock("No students yet", "Add the first student from the form.")}
+              ${state.students.map((student) => renderStudentCard(student)).join("") || emptyBlock("No students yet")}
             </div>
           </div>
         </section>
@@ -694,7 +671,7 @@
         ${pageHeader(
           "History",
           "All saved activity",
-          "Filter by direction, category, account, or student. Deleting an item reverses its balance effect.",
+          "",
           `<a class="button" href="#/log">Log transaction</a>`
         )}
         <section class="panel">
@@ -738,7 +715,7 @@
           </div>
         </section>
         <section class="table-shell">
-          ${filtered.length ? renderHistoryTable(filtered) : emptyBlock("No matching activity", "Change filters or add a transaction.")}
+          ${filtered.length ? renderHistoryTable(filtered) : emptyBlock("No matching activity")}
         </section>
       </section>
     `;
@@ -786,45 +763,27 @@
       <section class="page">
         ${pageHeader(
           "Settings",
-          "Customize this app for the new user",
-          "Edit labels, banks, categories, students, and test data without changing code.",
-          `<button class="ghost-button" type="button" data-action="export-data">Export JSON</button>`
+          "Settings",
+          "",
+          `<button class="ghost-button" type="button" data-action="export-data">Export JSON</button><button class="ghost-button" type="button" data-action="import-data">Import JSON</button><input id="importFile" class="hidden" type="file" accept="application/json,.json" />`
         )}
-        <section class="settings-grid">
-          <div class="panel">
-            <h3>Profile</h3>
-            ${renderProfileForm()}
-          </div>
-          <div class="panel">
-            <h3>Testing and data</h3>
-            <p class="panel-copy">Demo data lets someone test every workflow. Export and import make it easy to move a test state between machines.</p>
-            <div class="actions">
-              <button class="button-secondary" type="button" data-action="load-demo">Load demo data</button>
-              <button class="ghost-button" type="button" data-action="import-data">Import JSON</button>
-              <button class="danger-button" type="button" data-action="reset-blank">Reset blank</button>
-            </div>
-            <input id="importFile" class="hidden" type="file" accept="application/json,.json" />
-            ${
-              health
-                ? `<p class="panel-copy">Local: ${escapeHtml(health.localUrl)}<br>Same Wi-Fi: ${escapeHtml(health.networkUrl)}</p>`
-                : ""
-            }
-          </div>
+        <section class="panel">
+          <h3>Profile</h3>
+          ${renderProfileForm()}
         </section>
         <section class="settings-grid">
           <div class="panel">
-            <h3>${ui.editingAccountId ? "Edit account" : "Add bank account"}</h3>
+            <h3>${ui.editingAccountId ? "Edit account" : "Add account"}</h3>
             ${renderAccountForm()}
           </div>
           <div class="panel">
             <div class="panel-head">
               <div>
-                <h3>Drawer and banks</h3>
-                <p class="panel-copy">The drawer is permanent. Bank accounts can be archived and restored.</p>
+                <h3>Accounts</h3>
               </div>
             </div>
             <div class="list">
-              ${state.accounts.map(renderAccountManagementCard).join("")}
+              ${state.accounts.map(renderAccountManagementCard).join("") || emptyBlock("No accounts yet")}
             </div>
           </div>
         </section>
@@ -871,10 +830,6 @@
           <label for="currencySymbol">Currency symbol</label>
           <input id="currencySymbol" name="currencySymbol" value="${escapeAttribute(state.settings.currencySymbol)}" required />
         </div>
-        <div class="field half">
-          <label for="drawerLabel">Drawer label</label>
-          <input id="drawerLabel" name="drawerLabel" value="${escapeAttribute(state.settings.drawerLabel)}" required />
-        </div>
         <div class="field wide">
           <button class="button" type="submit">Save profile</button>
         </div>
@@ -884,12 +839,11 @@
 
   function renderAccountForm() {
     const account = state.accounts.find((item) => item.id === ui.editingAccountId);
-    const isDrawer = account?.type === "drawer";
     return `
       <form class="form-grid" data-form="account" data-account-id="${account?.id || ""}">
         <div class="field wide">
-          <label for="accountName">${isDrawer ? "Drawer name" : "Bank name"}</label>
-          <input id="accountName" name="name" value="${escapeAttribute(account?.name || "")}" placeholder="Bank name" required />
+          <label for="accountName">Account name</label>
+          <input id="accountName" name="name" value="${escapeAttribute(account?.name || "")}" placeholder="Account name" required />
         </div>
         <div class="field wide">
           <label for="accountBalance">Current balance</label>
@@ -897,7 +851,7 @@
         </div>
         <div class="field wide">
           <div class="actions">
-            <button class="button" type="submit">${account ? "Update account" : "Add bank"}</button>
+            <button class="button" type="submit">${account ? "Update account" : "Add account"}</button>
             ${account ? `<button class="ghost-button" type="button" data-action="cancel-account-edit">Cancel</button>` : ""}
           </div>
         </div>
@@ -1048,11 +1002,6 @@
     state.settings.appName = cleanText(data.get("appName")) || "Transaction Logger";
     state.settings.ownerName = cleanText(data.get("ownerName")) || "New User";
     state.settings.currencySymbol = cleanText(data.get("currencySymbol")) || "৳";
-    state.settings.drawerLabel = cleanText(data.get("drawerLabel")) || "Drawer";
-    const drawer = state.accounts.find((account) => account.type === "drawer");
-    if (drawer) {
-      drawer.name = state.settings.drawerLabel;
-    }
     persistAndRender("Profile saved.");
   }
 
@@ -1071,13 +1020,10 @@
     if (existing) {
       existing.name = name;
       existing.balance = balance;
-      if (existing.type === "drawer") {
-        state.settings.drawerLabel = name;
-      }
     } else {
       state.accounts.push({
-        id: createId("bank"),
-        type: "bank",
+        id: createId("account"),
+        type: "account",
         name,
         balance,
         archived: false
@@ -1085,7 +1031,7 @@
     }
 
     ui.editingAccountId = "";
-    persistAndRender(existing ? "Account updated." : "Bank added.");
+    persistAndRender(existing ? "Account updated." : "Account added.");
   }
 
   function submitCategory(form) {
@@ -1177,7 +1123,7 @@
 
   function setAccountArchived(accountId, archived) {
     const account = accountById(accountId);
-    if (!account || account.type === "drawer") {
+    if (!account) {
       return;
     }
     account.archived = archived;
@@ -1244,15 +1190,6 @@
     state = apiAvailable ? await fetchJson(API_DEFAULT_STATE) : createDefaultState();
     initializeSelections();
     persistAndRender("Blank state loaded.");
-  }
-
-  async function loadDemoState() {
-    if (!window.confirm("Replace current data with demo testing data?")) {
-      return;
-    }
-    state = apiAvailable ? await fetchJson(API_DEMO_STATE) : createDemoState();
-    initializeSelections();
-    persistAndRender("Demo data loaded.");
   }
 
   function exportData() {
@@ -1360,7 +1297,6 @@
         <div>
           <p class="eyebrow">${escapeHtml(kicker)}</p>
           <h2>${title}</h2>
-          <p>${escapeHtml(copy)}</p>
         </div>
         ${actions ? `<div class="actions">${actions}</div>` : ""}
       </header>
@@ -1382,7 +1318,7 @@
         <div class="list-top">
           <div>
             <p class="list-title">${escapeHtml(account.name)}</p>
-            <p class="list-meta">${account.type === "drawer" ? "Drawer account" : "Bank account"}</p>
+            <p class="list-meta">Account</p>
           </div>
           <span class="amount-pill">${formatMoney(account.balance)}</span>
         </div>
@@ -1396,16 +1332,14 @@
         <div class="list-top">
           <div>
             <p class="list-title">${escapeHtml(account.name)}</p>
-            <p class="list-meta">${account.type === "drawer" ? "Permanent drawer" : account.archived ? "Archived bank" : "Active bank"}</p>
+            <p class="list-meta">${account.archived ? "Archived" : "Active"}</p>
           </div>
           <span class="amount-pill">${formatMoney(account.balance)}</span>
         </div>
         <div class="inline-actions">
           <button class="icon-button" type="button" data-action="edit-account" data-account-id="${account.id}">Edit</button>
           ${
-            account.type === "drawer"
-              ? ""
-              : account.archived
+            account.archived
                 ? `<button class="ghost-button" type="button" data-action="restore-account" data-account-id="${account.id}">Restore</button>`
                 : `<button class="ghost-button" type="button" data-action="archive-account" data-account-id="${account.id}">Archive</button>`
           }
@@ -1482,11 +1416,10 @@
     `;
   }
 
-  function emptyBlock(title, copy) {
+  function emptyBlock(title) {
     return `
       <div class="empty">
         <h3>${escapeHtml(title)}</h3>
-        <p class="panel-copy">${escapeHtml(copy)}</p>
       </div>
     `;
   }
@@ -1701,6 +1634,56 @@
     return String(value ?? "").trim();
   }
 
+  function prepareState(payload) {
+    const defaults = createDefaultState();
+    const next = payload && typeof payload === "object" ? payload : defaults;
+    next.settings = {
+      ...defaults.settings,
+      ...(next.settings || {})
+    };
+    delete next.settings.drawerLabel;
+    delete next.settings.testerMode;
+
+    next.accounts = Array.isArray(next.accounts) ? next.accounts : [];
+    next.transactions = Array.isArray(next.transactions) ? next.transactions : [];
+    next.students = Array.isArray(next.students) ? next.students : [];
+    next.categories = next.categories || defaults.categories;
+    next.categories.credit = Array.isArray(next.categories.credit)
+      ? next.categories.credit
+      : defaults.categories.credit;
+    next.categories.debit = Array.isArray(next.categories.debit)
+      ? next.categories.debit
+      : defaults.categories.debit;
+    next.tuitionTracker =
+      next.tuitionTracker && typeof next.tuitionTracker === "object" ? next.tuitionTracker : {};
+
+    const referencedAccountIds = new Set();
+    next.transactions.forEach((transaction) => {
+      if (transaction.accountId) {
+        referencedAccountIds.add(transaction.accountId);
+      }
+      if (transaction.transferAccountId) {
+        referencedAccountIds.add(transaction.transferAccountId);
+      }
+    });
+
+    next.accounts = next.accounts
+      .filter((account) => {
+        const isUnusedDefaultDrawer =
+          (account.id === "drawer-main" || account.type === "drawer") &&
+          String(account.name || "").trim().toLowerCase() === "drawer" &&
+          Number(account.balance || 0) === 0 &&
+          !referencedAccountIds.has(account.id);
+        return !isUnusedDefaultDrawer;
+      })
+      .map((account) => ({
+        ...account,
+        type: "account"
+      }));
+
+    return next;
+  }
+
   function createDefaultState() {
     const tuitionCategoryId = "credit-tuition";
     return {
@@ -1709,19 +1692,9 @@
         appName: "Transaction Logger",
         ownerName: "New User",
         currencySymbol: "৳",
-        drawerLabel: "Drawer",
         tuitionCategoryId,
-        testerMode: false
       },
-      accounts: [
-        {
-          id: "drawer-main",
-          type: "drawer",
-          name: "Drawer",
-          balance: 0,
-          archived: false
-        }
-      ],
+      accounts: [],
       categories: {
         credit: [
           { id: tuitionCategoryId, name: "Tuition", role: "tuition", archived: false },
@@ -1744,72 +1717,6 @@
         updatedAt: new Date().toISOString()
       }
     };
-  }
-
-  function createDemoState() {
-    const demo = createDefaultState();
-    const bankId = createId("bank");
-    const studentOne = createId("student");
-    const studentTwo = createId("student");
-    const date = today();
-
-    demo.settings.ownerName = "Tester";
-    demo.settings.testerMode = true;
-    demo.accounts[0].balance = 3500;
-    demo.accounts.push({
-      id: bankId,
-      type: "bank",
-      name: "Demo Bank",
-      balance: 15000,
-      archived: false
-    });
-    demo.students = [
-      { id: studentOne, name: "Demo Student A", active: true, cycleDays: null },
-      { id: studentTwo, name: "Demo Student B", active: true, cycleDays: 12 }
-    ];
-    demo.transactions = [
-      {
-        id: createId("tx"),
-        direction: "credit",
-        categoryId: demo.settings.tuitionCategoryId,
-        categoryName: "Tuition",
-        accountId: bankId,
-        accountName: "Demo Bank",
-        transferAccountId: "",
-        transferAccountName: "",
-        studentId: studentOne,
-        studentName: "Demo Student A",
-        amount: 2500,
-        date,
-        note: "Sample tuition payment",
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: createId("tx"),
-        direction: "debit",
-        categoryId: "debit-food",
-        categoryName: "Food",
-        accountId: "drawer-main",
-        accountName: "Drawer",
-        transferAccountId: "",
-        transferAccountName: "",
-        studentId: "",
-        studentName: "",
-        amount: 450,
-        date,
-        note: "Sample expense",
-        createdAt: new Date().toISOString()
-      }
-    ];
-    demo.tuitionTracker[date.slice(0, 7)] = {
-      studentIds: [studentOne, studentTwo],
-      attendance: {
-        [studentOne]: { [date]: true },
-        [studentTwo]: {}
-      }
-    };
-
-    return demo;
   }
 
   function roundMoney(value) {
