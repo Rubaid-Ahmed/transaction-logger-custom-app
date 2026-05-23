@@ -1,0 +1,12 @@
+{
+  "name": "custom-transaction-logger",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Customizable transaction logger, account tracker, and tuition tracker.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
