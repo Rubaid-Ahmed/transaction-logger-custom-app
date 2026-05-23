@@ -1641,7 +1641,6 @@
       ...defaults.settings,
       ...(next.settings || {})
     };
-    delete next.settings.drawerLabel;
     delete next.settings.testerMode;
 
     next.accounts = Array.isArray(next.accounts) ? next.accounts : [];
@@ -1657,26 +1656,7 @@
     next.tuitionTracker =
       next.tuitionTracker && typeof next.tuitionTracker === "object" ? next.tuitionTracker : {};
 
-    const referencedAccountIds = new Set();
-    next.transactions.forEach((transaction) => {
-      if (transaction.accountId) {
-        referencedAccountIds.add(transaction.accountId);
-      }
-      if (transaction.transferAccountId) {
-        referencedAccountIds.add(transaction.transferAccountId);
-      }
-    });
-
-    next.accounts = next.accounts
-      .filter((account) => {
-        const isUnusedDefaultDrawer =
-          (account.id === "drawer-main" || account.type === "drawer") &&
-          String(account.name || "").trim().toLowerCase() === "drawer" &&
-          Number(account.balance || 0) === 0 &&
-          !referencedAccountIds.has(account.id);
-        return !isUnusedDefaultDrawer;
-      })
-      .map((account) => ({
+    next.accounts = next.accounts.map((account) => ({
         ...account,
         type: "account"
       }));
