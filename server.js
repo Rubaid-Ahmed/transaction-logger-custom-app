@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const { createDefaultState, createDemoState } = require("./backend/default-state");
+const { createDefaultState } = require("./backend/default-state");
 const { loadState, saveState, getDataPath } = require("./backend/store");
 
 const ROOT = __dirname;
@@ -134,15 +134,6 @@ function handleApi(req, res, pathname) {
       return true;
     }
     sendJson(res, 200, createDefaultState());
-    return true;
-  }
-
-  if (pathname === "/api/demo-state") {
-    if (req.method !== "GET") {
-      sendJson(res, 405, { error: "Method not allowed" });
-      return true;
-    }
-    sendJson(res, 200, createDemoState());
     return true;
   }
 

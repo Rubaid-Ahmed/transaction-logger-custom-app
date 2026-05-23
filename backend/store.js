@@ -34,17 +34,13 @@ function normalizeState(payload) {
     ? source.accounts
         .map((account, index) => ({
           id: normalizeText(account.id, `account-${index + 1}`),
-          type: account.type === "drawer" ? "drawer" : "bank",
-          name: normalizeText(account.name, account.type === "drawer" ? "Drawer" : `Bank ${index + 1}`),
+          type: "account",
+          name: normalizeText(account.name, `Account ${index + 1}`),
           balance: normalizeNumber(account.balance, 0),
           archived: account.archived === true
         }))
         .filter((account) => account.name)
     : clone(defaults.accounts);
-
-  if (!accounts.some((account) => account.type === "drawer")) {
-    accounts.unshift(clone(defaults.accounts[0]));
-  }
 
   const normalized = {
     version: 1,
@@ -53,9 +49,7 @@ function normalizeState(payload) {
       appName: normalizeText(settings.appName, defaults.settings.appName),
       ownerName: normalizeText(settings.ownerName, defaults.settings.ownerName),
       currencySymbol: normalizeText(settings.currencySymbol, defaults.settings.currencySymbol),
-      drawerLabel: normalizeText(settings.drawerLabel, defaults.settings.drawerLabel),
-      tuitionCategoryId: normalizeText(settings.tuitionCategoryId, defaults.settings.tuitionCategoryId),
-      testerMode: settings.testerMode === true
+      tuitionCategoryId: normalizeText(settings.tuitionCategoryId, defaults.settings.tuitionCategoryId)
     },
     accounts,
     categories: {
@@ -70,11 +64,6 @@ function normalizeState(payload) {
       updatedAt: new Date().toISOString()
     }
   };
-
-  const drawer = normalized.accounts.find((account) => account.type === "drawer");
-  if (drawer) {
-    drawer.name = normalized.settings.drawerLabel;
-  }
 
   if (!normalized.categories.credit.some((category) => category.id === normalized.settings.tuitionCategoryId)) {
     const tuition = normalized.categories.credit.find((category) => category.role === "tuition");

@@ -12,22 +12,21 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand">
+      <div class="brand-block">
         <p class="eyebrow">Private Ledger</p>
         <h1 data-bind="app-title">Transaction Logger</h1>
         <p data-bind="owner-name">New User</p>
       </div>
-      <nav class="nav" aria-label="Primary">
-        <a href="#/dashboard" data-route="dashboard">Dashboard</a>
-        <a href="#/log" data-route="log">Log</a>
-        <a href="#/tuition" data-route="tuition">Tuition</a>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a href="#/dashboard" data-route="dashboard">Home</a>
+        <a href="#/log" data-route="log">Transactions</a>
         <a href="#/students" data-route="students">Students</a>
+        <a href="#/tuition" data-route="tuition">Tuition Tracker</a>
         <a href="#/history" data-route="history">History</a>
         <a href="#/settings" data-route="settings">Settings</a>
       </nav>
-      <div class="server-chip" id="serverStatus">Loading...</div>
     </aside>
-    <main class="main">
+    <main class="main-panel">
       <div id="app" aria-live="polite"></div>
     </main>
   </div>

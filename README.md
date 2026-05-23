@@ -29,19 +29,15 @@ Windows may ask to allow Node.js through the firewall the first time.
 
 Open `Settings` in the app to change:
 
-- app name, user name, currency symbol, and drawer label
-- drawer balance and bank accounts
+- app name, user name, and currency symbol
+- accounts and opening balances
 - credit categories, including which one is used for tuition/student credits
 - debit categories
 - student names and optional tuition cycles
 
-## Testing Tools
+## Manual
 
-In `Settings`, use:
-
-- `Load demo data` for a quick tester-ready sample
-- `Reset blank` for a clean new-user state
-- `Export JSON` and `Import JSON` to move test data between machines
+See `INSTRUCTION_MANUAL.md`.
 
 ## GitHub Pages Hosting
 
